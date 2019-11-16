@@ -9,10 +9,10 @@ import java.util.List;
 
 public class Server {
 
+    private final int PUERTO = 1234;
     private List<Tortuga> tortugas;
-    private final int PUERTO = 1234;        // Socket correspondiente al servidor
-    private ServerSocket serverSocket;      // SOcket correspondiente al cliente
-    private Socket socket;
+    private ServerSocket serverSocket;      // Socket correspondiente al servidor
+    private Socket socket;                  // Socket correspondiente al cliente
 
     // Constructor
     public Server() throws IOException {
@@ -36,7 +36,11 @@ public class Server {
             // Inicializamos el server para que escuche las peticiones en bucle
             while(true){
                 System.out.println("Esperando la conexion del cliente");
+
+                // Punto en el que el servidor espera la respuesta del cliente
                 socket = serverSocket.accept();
+
+                System.out.println("Conexion realizada: Server ====== CLient");
 
                 // Enviamos mensaje al cliente para decirle que hemos recibido su peticion
                 mensajeCliente = new DataOutputStream(socket.getOutputStream());
