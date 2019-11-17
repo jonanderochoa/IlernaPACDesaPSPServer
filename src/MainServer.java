@@ -5,14 +5,19 @@ import java.io.IOException;
  */
 public class MainServer {
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args){
 
-        // Creamos instancia de la clase servidor
-        Server server = new Server();
+        try {
+            // Creamos instancia de la clase servidor
+            Server server = new Server();
 
-        System.out.println("Iniciando servidor...");
+            System.out.println("Iniciando servidor...");
 
-        // Iniciamos el servidor
-        server.iniciarServer();
+            // Iniciamos el servidor
+            server.initServer();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

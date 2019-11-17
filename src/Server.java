@@ -1,151 +1,141 @@
-import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import com.sun.xml.internal.ws.api.model.wsdl.WSDLOutput;
+
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 public class Server {
 
-    private final int PUERTO = 1234;
-    private List<Tortuga> tortugas;
-    private ServerSocket serverSocket;      // Socket correspondiente al servidor
-    private Socket socket;                  // Socket correspondiente al cliente
+    private final int PORT = 1234;
+    private ServerSocket serverSocket;              // Socket correspondiente al servidor
+    private Socket socket;                          // Socket correspondiente al cliente
+    private DataOutputStream messageToClient;
+    private DataInputStream messageFromClient;
+    private ManageTurtle manageTurtle;
 
-    // Constructor
     public Server() throws IOException {
-        tortugas = new ArrayList<Tortuga>();
-        serverSocket = new ServerSocket(PUERTO);
+        manageTurtle= new ManageTurtle();
+        // Creamos un server socket configurando el puerto
+        serverSocket = new ServerSocket(PORT);
         socket = new Socket();
     }
+    
+    public void initServer() throws IOException {
+        try {
+            connectClient();
 
-    /*
-    Tenemos que recibir los mensajes del cliente y en funcion del tipo de
-    mensaje:
-    - mostraremos las tortugas
-    - crearemos una nueva tortuga
-    - Eliminaremos una tortuga
-    - Iniciaremos la carrera
-     */
-    public void iniciarServer() throws IOException {
-        DataOutputStream mensajeCliente;
-        String mensajeDeCliente;
-        try{
             // Inicializamos el server para que escuche las peticiones en bucle
-            while(true){
-                System.out.println("Esperando la conexion del cliente");
+            while (true) {
 
-                // Punto en el que el servidor espera la respuesta del cliente
-                socket = serverSocket.accept();
-
-                System.out.println("Conexion realizada: Server ====== CLient");
-
-                // Enviamos mensaje al cliente para decirle que hemos recibido su peticion
-                mensajeCliente = new DataOutputStream(socket.getOutputStream());
-                mensajeCliente.writeUTF("Peticion recibida");
-
-                // Recibimos los mensajes que nos mande el cliente
-                BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                while((mensajeDeCliente = entrada.readLine()) != null){
-                    System.out.println(mensajeDeCliente);
+                try {
+//                socket = serverSocket.accept();
+                    selector(receiveFromClient());
+//                socket.close();
+                } catch (IndexOutOfBoundsException e) {
+                    System.out.println(Constantes.ERROR_INVALID_VALUE);
+                    System.out.println(Constantes.SEPARATOR);
+                    sendToClient(Constantes.ERROR_INVALID_VALUE);
                 }
             }
         }catch (Exception e){
             System.out.println(e.getMessage());
         }finally {
             serverSocket.close();
-            System.out.println("Fin de la conexion");
+            System.out.println(Constantes.MESSAGE_DISCONNECT);
         }
     }
 
-    /**
-     * Muestra todas las tortugas que contiene el arrayList
-     */
-    public void mostrarTortugas(){
-        for (Tortuga t: tortugas){
-            System.out.println(t);
+    public void connectClient() throws IOException {
+
+        // Conexion con en cliente
+        System.out.println(Constantes.MESSAGE_WAITING_CLIENT);
+        socket = serverSocket.accept();
+
+        messageFromClient = new DataInputStream(socket.getInputStream());
+        messageToClient = new DataOutputStream(socket.getOutputStream());
+
+        // Enviamos mensaje al cliente
+        sendToClient(Constantes.MESSAGE_CONNECTION);
+
+        // Recibimos mensaje del cliente
+        System.out.println(receiveFromClient());
+//        socket.close();
+    }
+
+    public String receiveFromClient() throws IOException {
+        return  messageFromClient.readUTF();
+    }
+
+    public void sendToClient(String message) throws IOException {
+        messageToClient.writeUTF(message);
+    }
+
+    public void selector(String input) throws IOException {
+
+        switch (input){
+            case "1":
+                System.out.println("\nNueva tortuga");
+                newTurtle();
+                break;
+            case "2":
+                System.out.println("\nEliminar tortuga");
+                deleteTurtle();
+                break;
+            case "3":
+                System.out.println("\nMostrar tortugas");
+                showTurtleList();
+//                manageTurtle.showAllTurtles();
+                break;
+            case "4":
+                System.out.println("\nIniciar carrera");
+                startRace();
+                break;
+            default:
+                System.out.println("\nError en la seleccion");
         }
     }
 
-    /**
-     * Metodo que pasandole un nombre y dorsal, devuelve una instancia de
-     * la clase Tortuga.
-     *
-     * @param nombre Nombre que se le asigna a la tortuga
-     * @param dorsal Dorsal que se le asigna a la tortuga
-     * @return Devuelve un objeto de tipo Tortuga
-     */
-    public Tortuga crearTortuga(String nombre, int dorsal){
-        return new Tortuga(nombre, dorsal);
+    public void newTurtle() throws IOException {
+
+        String nombre = "";
+        int dorsal = 0;
+
+        sendToClient(Constantes.MESSAGE_TURTLE_NAME);
+        nombre = receiveFromClient();
+        sendToClient(Constantes.MESSAGE_TURTLE_DORSAL);
+        dorsal = Integer.parseInt(receiveFromClient());
+
+        // Creamos la torguga con el nombre y dorsal indicados y lo introducimos en el arraylist
+        manageTurtle.addTurtle(manageTurtle.createTurtle(nombre, dorsal));
+
+        sendToClient(Constantes.MESSAGE_NEW_TURTLE);
     }
 
-    /**
-     * Metodo que se encarga de añadir la tortuga al arraylist
-     * @param tortuga Objeto Tortuga que se añade
-     */
-    public void addTortuga(Tortuga tortuga){
-        tortugas.add(tortuga);
+    public void deleteTurtle() throws IOException {
+
+        try {
+            int index = 0;
+
+            sendToClient(Constantes.MESSAGE_SELECT_TURTLE);
+            index = Integer.parseInt(receiveFromClient());
+            Turtle turtle = manageTurtle.deleteTurtle(index -1);
+            System.out.println(Constantes.MESSAGE_DELETE_TURTLE + turtle);
+            sendToClient(Constantes.MESSAGE_DELETE_TURTLE + turtle);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
     }
 
-    /**
-     * Elimina la tortuga de la lista pasandole como parametro el indice del arrayList
-     * @param index Indice del arraylist que borrar
-     * @return Devuelve el objeto a eliminar
-     */
-    public Tortuga eliminarTortuga(int index){
-        return tortugas.remove(index);
+    public void showTurtleList() throws IOException {
+//        for(int i = 0; i < manageTurtle.getTurtles().size(); i++){
+//            messageToClient.writeUTF("Tortuga " + (i + 1) + manageTurtle.getTurtle(i));
+//        }
+        manageTurtle.showAllTurtles();
     }
 
-    /**
-     * Elimina la tortuga que corresponde a la tortuga pasada por parametro
-     *
-     * @param tortuga Tortuga que queremos eliminar
-     * @return Devuelve true si se ha borrado correctamente
-     */
-    public boolean eliminarTortuga(Tortuga tortuga){
-        return tortugas.remove(tortuga);
-    }
-
-    /**
-     * Elimina todas las tortugas de la lista
-     */
-    public void eliminaTodasTortugas(){
-        tortugas.clear();
-    }
-
-    public void empezarCarrera(){
-        System.out.println("Empezar la carrera...");
-    }
-
-    /**
-     * Metodo que devuelve el indice en el arraylist en el que se encuentra el objeto TOrtuga
-     *
-     * @param tortuga  Tortuga que se desea buscar
-     * @return Devuelve el indice
-     */
-    public int indexOf(Tortuga tortuga){
-        return tortugas.indexOf(tortuga);
-    }
-
-    /**
-     * Devuelve la tortuga cuyo indice coincida con el indice pasado por parametro
-     * @param indice Indice pasado por parametro
-     * @return Devuelve la Tortuga que corresponde a ese indice
-     */
-    public Tortuga getTortuga(int indice){
-        return tortugas.get(indice);
-    }
-
-    /**
-     * Metodo que se enccarga de modificar o sustituir una tortuga por otra.
-     *
-     * @param index Indice de la posicion de arraylist que se sustituira
-     * @param tortugaModificada Objeto que sustituira al que se encuentra en la posicion index
-     * @return Devuelve un objeto Tortuga modificado
-     */
-    public Tortuga setTortugas(int index, Tortuga tortugaModificada){
-        return tortugas.set(index, tortugaModificada);
+    public void startRace() throws IOException {
+        System.out.println("A correr todo el mundo");
     }
 }

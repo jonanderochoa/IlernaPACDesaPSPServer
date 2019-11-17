@@ -1,24 +1,24 @@
 /**
  * Clase POJO
  */
-public class Tortuga {
+public class Turtle {
 
-    private String nombre;
+    private String name;
     private int dorsal;
 
-    public Tortuga(){ }
+    public Turtle(){ }
 
-    public Tortuga(String nombre, int dorsal) {
-        this.nombre = nombre;
+    public Turtle(String name, int dorsal) {
+        this.name = name;
         this.dorsal = dorsal;
     }
 
     public String getNombre() {
-        return nombre;
+        return name;
     }
 
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
+    public void setNombre(String name) {
+        this.name = name;
     }
 
     public int getDorsal() {
@@ -31,8 +31,8 @@ public class Tortuga {
 
     @Override
     public String toString() {
-        return "Tortuga{" +
-                "nombre='" + nombre + '\'' +
+        return "Turtle{" +
+                "name='" + name + '\'' +
                 ", dorsal=" + dorsal +
                 '}';
     }
