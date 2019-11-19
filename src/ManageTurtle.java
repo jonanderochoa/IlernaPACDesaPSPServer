@@ -2,6 +2,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Clase encargada de gestionar las tortugas y la lista que las contiene
+ *
  * @project IlernaPACDesaPSPServer
  * @author: jonan on 17/11/2019
  */
@@ -72,10 +74,6 @@ public class ManageTurtle {
      */
     public void deleteAllTurtles(){
         turtles.clear();
-    }
-
-    public void startRace(){
-        System.out.println("Empezar la carrera...");
     }
 
     /**

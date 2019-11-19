@@ -1,4 +1,5 @@
 /**
+ * Clase que contiene los textos y constantes
  * @project IlernaPACDesaPSPServer
  * @author: jonan on 16/11/2019
  */
