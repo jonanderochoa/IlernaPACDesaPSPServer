@@ -3,13 +3,18 @@ import com.sun.xml.internal.ws.api.model.wsdl.WSDLOutput;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLOutput;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 
 /**
  * Clase Server.
  * Gestiona en envio y recepcion de mensajes con el cliente.
  *
  */
-public class Server {
+public class Server implements Observer {
 
     private boolean listening = true;
     private final int PORT = 1234;                  // Puerto del ServerSocket
@@ -18,8 +23,10 @@ public class Server {
     private DataOutputStream messageToClient;       // Flujo de salida de datos
     private DataInputStream messageFromClient;      // Flujo de entrada de datos
     private ManageTurtle manageTurtle;              // Clase que gestiona las operaciones con tortugas
+    private Thread[] hilos;                                 // Array que contiene los hilos
 
     public Server() throws IOException {
+        hilos = new Thread[10];                     // Inicializamos el array en como maximo 10 corredores
         manageTurtle= new ManageTurtle();           // Creamos una instancia para gestionar las tortugas
         serverSocket = new ServerSocket(PORT);      // Creamos un server socket configurando el puerto
         socket = new Socket();                      // Creamos una instacia de un socket
@@ -181,9 +188,58 @@ public class Server {
      * Inicializa la carrera
      * @throws IOException
      */
-    public void startRace() throws IOException {
-        System.out.println("PUUUUUUMM!!! ");
-        new Race(manageTurtle.getTurtles());
-        sendToClient("THE WINNER IS: " + Turtle.winner);
+    public void startRace() {
+        if(validateRace()){
+
+            System.out.println("PUUUUUUMM!!! ");
+            System.out.println("################ START RACE ###################");
+            int i = 0;
+            for (Turtle t: manageTurtle.getTurtles()){
+                t.addObserver(this);
+                hilos[i] = new Thread(t);
+                hilos[i++].start();
+            }
+        }
+    }
+
+    /**
+     * Comprueba que como maximo los participantes de la carrera sean 10
+     * @return boolean
+     */
+    private boolean validateRace() {
+        if (manageTurtle.getTurtles().size() > 10) {
+            System.out.println("El máximo número de participantes es 10");
+            return false;
+        }else{
+            return true;
+        }
+    }
+
+    /**
+     * Metodo sobreescrito de la interfaz observer que permite recoger el valor mandado del hilo
+     * @param observable El objeto que lo manda Turtle
+     * @param o El valor del name que llega antes. El ganador
+     */
+    @Override
+    public void update(Observable observable, Object o) {
+        // Recogemos el nombre del ganador y lo mandamos al cliente
+        String name = (String)o;
+        stopRace();
+        try {
+            sendToClient("###########################  THE WINNER IS: " + name + " ################################");
+        } catch (IOException e) {
+            System.out.println("Error al enviar el ganador al servidor");
+        }
+    }
+
+    /**
+     * Metodo que detiene el resto de hilos cuando recibe un valor
+     */
+    private void stopRace(){
+        for (Thread t: hilos){
+            if(t != null){
+                t.interrupt();
+            }
+        }
     }
 }
